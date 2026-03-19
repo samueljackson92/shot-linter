@@ -1,0 +1,14 @@
+[project]
+name = "uda-linter"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "uda-xarray",
+    "xinter",
+]
+
+[tool.uv.sources]
+xinter = { git = "https://github.com/samueljackson92/xinter.git" }
+uda-xarray = { git = "https://github.com/samueljackson92/uda-xarray.git" }

@@ -3,7 +3,7 @@ import argparse
 import multiprocessing as mp
 from functools import partial
 import pandas as pd
-from rich.console import Console
+from loguru import logger
 from xinter.core import lint_dataset, reports_to_dataframe
 
 
@@ -16,16 +16,14 @@ def process_signal(shot: int, signal: str, transport: str):
     return report
 
 
-def gather_results(console, results):
+def gather_results(results):
     output = []
     for result in results:
         if isinstance(result, list):
-            console.print(f"[green]Successfully linted {result[0].file_path}[/green]")
+            logger.info(f"Successfully linted {result[0].file_path}")
             output.append(result)
         else:
-            console.print(
-                f"[red]Error linting shot {result[0]} with signal {result[1]}[/red]"
-            )
+            logger.error(f"Error linting shot {result[0]} with signal {result[1]}")
     return output
 
 
@@ -66,7 +64,6 @@ def main():
         help="Number of worker processes to use",
     )
     args = parser.parse_args()
-    console = Console()
 
     if args.shots:
         shots = args.shots
@@ -75,20 +72,20 @@ def main():
     elif args.shot_min is not None and args.shot_max is not None:
         shots = list(range(args.shot_min, args.shot_max + 1))
     else:
-        console.print(
-            "[red]Error: You must specify either --shots, --shot-file, or both --shot-min and --shot-max[/red]"
+        logger.error(
+            "Error: You must specify either --shots, --shot-file, or both --shot-min and --shot-max"
         )
         sys.exit(1)
 
     signals = args.signals
     reports = []
 
-    with mp.Pool(args.num_workers) as pool:
+    with mp.Pool(args.num_workers, maxtasksperchild=1) as pool:
         results = pool.imap_unordered(
             partial(_process_signal, transport=args.transport),
             ((shot, signal) for shot in shots for signal in signals),
         )
-        reports = gather_results(console, results)
+        reports = gather_results(results)
 
     df = reports_to_dataframe(reports)
     df = df.pivot(
@@ -102,7 +99,7 @@ def main():
     elif args.output_file.endswith(".csv"):
         df.to_csv(args.output_file, index=True)
 
-    console.print(f"Linting results saved to {args.output_file}")
+    logger.info(f"Linting results saved to {args.output_file}")
 
 
 if __name__ == "__main__":

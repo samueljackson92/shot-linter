@@ -68,7 +68,14 @@ def main():
     if args.shots:
         shots = args.shots
     elif args.shot_file:
-        shots = pd.read_csv(args.shot_file, header=None).iloc[:, 0].tolist()
+        shot_file = args.shot_file
+        if shot_file.endswith(".csv"):
+            shots = pd.read_csv(shot_file, header=None).iloc[:, 0].astype(int).tolist()
+        elif shot_file.endswith(".parquet"):
+            shots = pd.read_parquet(shot_file).iloc[:, 0].map(int).tolist()
+        else:
+            logger.error("Error: Shot file must be in CSV or Parquet format")
+            sys.exit(1)
     elif args.shot_min is not None and args.shot_max is not None:
         shots = list(range(args.shot_min, args.shot_max + 1))
     else:

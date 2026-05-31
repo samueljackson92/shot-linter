@@ -7,10 +7,37 @@ from loguru import logger
 from xinter.core import lint_dataset, reports_to_dataframe
 
 
-def process_signal(shot: int, signal: str, transport: str):
-    uri = f"{transport}://{signal}:{shot}"
+def make_uri(shot: int, signal: str, transport: str) -> str:
+    """Build the backend URI for a given shot, signal, and transport.
+
+    Args:
+        shot: Shot number.
+        signal: Signal path (e.g. '/AMC/PLASMA_CURRENT').
+        transport: Either 'uda' or 'sal'.
+
+    Returns:
+        A URI string accepted by xarray.open_dataset via the registered backend engine.
+
+    Raises:
+        ValueError: If transport is not 'uda' or 'sal'.
+    """
+    if transport == "uda":
+        return f"uda://{signal}:{shot}"
+    elif transport == "sal":
+        return f"sal://pulse/{shot}/{signal}"
+    else:
+        raise ValueError(f"Unknown transport: {transport!r}. Expected 'uda' or 'sal'.")
+
+
+def process_signal(
+    shot: int,
+    signal: str,
+    transport: str,
+    check_coords: bool = False,
+):
+    uri = make_uri(shot, signal, transport)
     try:
-        report = lint_dataset(uri, engine=transport)
+        report = lint_dataset(uri, engine=transport, check_coords=check_coords)
     except Exception:
         report = (shot, signal)
     return report
@@ -27,8 +54,8 @@ def gather_results(results):
     return output
 
 
-def _process_signal(args, transport: str):
-    return process_signal(*args, transport=transport)
+def _process_signal(args, transport: str, check_coords: bool = False):
+    return process_signal(*args, transport=transport, check_coords=check_coords)
 
 
 def main():
@@ -48,6 +75,12 @@ def main():
         choices=["uda", "sal"],
         default="uda",
         help="Data transport method",
+    )
+    parser.add_argument(
+        "--check-coords",
+        action="store_true",
+        default=False,
+        help="Also lint coordinate variables in addition to data variables",
     )
     parser.add_argument(
         "-o",
@@ -89,7 +122,7 @@ def main():
 
     with mp.Pool(args.num_workers, maxtasksperchild=1) as pool:
         results = pool.imap_unordered(
-            partial(_process_signal, transport=args.transport),
+            partial(_process_signal, transport=args.transport, check_coords=args.check_coords),
             ((shot, signal) for shot in shots for signal in signals),
         )
         reports = gather_results(results)

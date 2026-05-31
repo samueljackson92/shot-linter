@@ -12,3 +12,11 @@ dependencies = [
 
 [tool.uv.sources]
 xinter = { git = "https://github.com/samueljackson92/xinter.git" }
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

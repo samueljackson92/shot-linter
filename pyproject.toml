@@ -5,6 +5,8 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
+    "loguru",
+    "rich",
     "sal-xarray>=0.2.2",
     "uda-xarray>=0.2.3",
     "xinter",
